@@ -1,0 +1,743 @@
+---
+title: "R Notebook for Kentler analyses"
+output: html_notebook
+authors: Lauren Fink & Hannah Fiehn
+contact: finkl1@mcmaster.ca
+---
+
+This notebook accompanies the manuscript:
+
+Fink & Fiehn (2023). The role of audiovisual congruence in perception and aesthetic appreciation of contemporary music and visual art.
+
+If using any code or data from this notebook, please cite the paper. 
+[DOI forthcoming]
+
+# Load and preprocess data
+
+Turn off warnings for cleaner submission file. N.B. users of this file should turn warnings on for troubleshooting
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+### Install required packages, if not already installed
+```{r}
+list.of.packages <- c("tidyverse", "ggpubr", "ez", "corrplot", "car", "stats","PerformanceAnalytics", "afex", "emmeans", "mlma", "ggplot2", "ggExtra", "psych", "ggpubr", "here", "gridExtra", "ggridges")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages) 
+```
+
+### Load packages and data
+We use the **here** package so that all file paths are relative. Users should be sure not to change the directory structure of the repository. 
+By default, figures will be plotted in line. If you want to save the figures to a folder on your local machine, set op = 1. 
+```{r}
+here::i_am("Kentler_analyses.Rmd")
+library(here)
+source(here("dependencies.R"))
+data <- read.csv(here("data.csv")) 
+fig_path <- here("figures/") # path to save generated figures to
+op = 0 # flag if want to save output plots to files (1) or plot inline (0)
+```
+
+### Pre-process the data
+Clean up variable names, add combined columns of interest, drop unnecessary columns
+```{r}
+# remove variables we don't need (Labvanced still outputting old vars from earlier exp. version)
+data_new <- subset(data, select = - c(Block_Name, Task_Nr, aud_tend_unix, aud_ts, aud_ts_unix, condi3, copy_of_condi2, copy_of_condi, frame_end_unix, frame_rt, Name.Audio._copy_4b49, Name.Audio._copy_93a7, Name.Audio._copy_bd6f, Name.Audio._copy_c958, Name.Audio._copy_c96c, Name.Audio., subj_counter_global, subj_counter_per_group, time_delay_offset, time_measure_std, pixelDensityPerMM,unlocked))
+
+# filter out people who have seen/heard stimuli before (some of our pilots) or who don't have normal hearing / vision
+exposed = table(data$prev_exposure)
+data_new <- data_new[-c(which(data_new$prev_exposure == "option_0")), ]
+normSenses = table(data$Normal.Vision.) # no one without
+data_new <- data_new[-c(which(data_new$completed == "no")), ] # remove incompletes
+data = data_new # overwrite old data so can't accidentally use it
+
+#create a dataframe just with the task block (for further analysis )
+data_task <- data_new %>% 
+  select(Trial_Nr, Trial_Id, correspondence_, enjoy_, Frame.Time., interestingness_, mood.congruency_, move_, subject_code, Block_Nr, group_name, exp_subject_id)
+
+data_task <- data_task[, c("exp_subject_id", "Block_Nr", "Trial_Nr", "Trial_Id","group_name", "Frame.Time.", "correspondence_", "enjoy_", "interestingness_", "mood.congruency_", "move_" )]
+
+# put time spent in secs (instead of ms)
+data_task$Frame.Time. = data_task$Frame.Time. / 1000
+
+# Add column for condition 
+# Trial_Id tells which condition it is (1 - 4 = A; 5 - 8 = V; 9 - 12 = AVI; 13 - 16 = AVR)
+# with Trial_Id and the group number we can look which specific stimuli are used 
+data_task$Trial_Id = as.numeric(data_task$Trial_Id)
+data_task$condition = NA
+data_task$condition[data_task$Trial_Id <= 4] = 'Audio' 
+data_task$condition[data_task$Trial_Id >= 5 & data_task$Trial_Id <= 8] = 'Visual' 
+data_task$condition[data_task$Trial_Id >= 9 & data_task$Trial_Id <= 12] = 'AV-Intended' 
+data_task$condition[data_task$Trial_Id >= 13] = 'AV-Random' 
+
+# create subset data frame of task data
+#just keep Block Number = 2 (these are the experimental trials)
+data_task <- data_task %>%
+  filter(Block_Nr == 2)
+
+# create subset data frame with just participant info
+data_participant <- data_new %>%
+  select(exp_subject_id, group_name, age_input, gender, country_current, country_home, Modality_Preference, Ollen, overall_enjoy, "prev_exposure", realWorldLikelihood)
+
+data_participant = na.omit(data_participant)
+
+# calculate area scores for each participant and add to participant data
+# AReA scale scoring
+#Aesthetic Appreciation: Items 1, 2, 3, 4, 6, 9, 13, 14
+#Intense Aesthetic Experience: Items 8, 11, 12, 13
+#Creative Behavior: Items 5, 7, 10
+area_data = data[data$Task_Name == 'AReA',]
+area_data$area_aes_apprec = area_data$area_01 + area_data$area_02 + area_data$area_03 + area_data$area_04 + area_data$area_06 + area_data$area_09 + area_data$area_13 + area_data$area_14
+area_data$area_aes_apprec = area_data$area_aes_apprec / 8 # divide by num of items
+area_data$area_intense_aes_exp = area_data$area_08 + area_data$area_11 + area_data$area_12 + area_data$area_13
+area_data$area_intense_aes_exp = area_data$area_intense_aes_exp / 4
+area_data$area_creative_beh = area_data$area_05 + area_data$area_07 + area_data$area_10
+area_data$area_creative_beh = area_data$area_creative_beh / 3
+area_data$area_composite = (area_data$area_aes_apprec + area_data$area_intense_aes_exp + area_data$area_creative_beh) / 3
+
+# add area scores to mean table (join based on exp_subj_id)
+area_data = area_data[,c("exp_subject_id", "area_aes_apprec", "area_intense_aes_exp", "area_creative_beh", "area_composite")]
+
+# merge area with participant df
+data_participant = merge(x=data_participant,y=area_data, 
+                         by="exp_subject_id", all=TRUE)
+
+# clean up modality pref data to have meaningful labels
+temp = data_participant$Modality_Preference
+temp = gsub("option_0", "prefer_audio", temp)
+temp = gsub("option_1", "prefer_visual", temp)
+temp = gsub("option_2", "prefer_audiovisual", temp)
+temp = gsub("option_3", "no_preference", temp)
+data_participant$Modality_Preference_cat = temp
+
+# join participant info with trial level data for final full data frame
+full_data = merge(x=data_task,y=data_participant, 
+                  by="exp_subject_id", all=TRUE)
+```
+
+Check participant number discrepencies between task data and demo data
+```{r}
+# something wrong! only 195 obs for people who saw endQs ?! (these were required questions. not sure how labvanced let that through)
+# table(data_new$Task_Name)
+
+# check what going on with 6 subs
+check = subset(full_data, is.na(full_data$Ollen))
+check2 = subset(data, is.na(full_data$Ollen))
+
+nsubs = length(unique(full_data$exp_subject_id))
+nsubs_missingDemo = length(unique(check$exp_subject_id))
+```
+It seems 6 participants never got the ending questions. We can include them for all trial analyses but they will be excluded from person-level analyses
+
+# Person-level analyses
+
+### Explore demographic data
+```{r}
+gender_dist = table(data_participant$gender)
+age_mean = mean(data_participant$age_input, na.rm = TRUE)
+age_std = sd(data_participant$age_input, na.rm = TRUE)
+ncountries = length(unique(data_participant$country_current))
+countries = table(data_participant$country_current)
+modality_pref = table(data_participant$Modality_Preference_cat) 
+
+print("Gender: man, woman, non-binary, prefer not to say")
+print(gender_dist)
+
+print("Age (mean, sd, min, max)")
+print(age_mean)
+print(age_std)
+print(min(data_participant$age_input, na.rm = TRUE))
+print(max(data_participant$age_input, na.rm = TRUE))
+
+print("Unique countries:")
+print(ncountries)
+print(countries)
+
+print("AReA (mean, sd):")
+print(mean(data_participant$area_composite))
+print(sd(data_participant$area_composite))
+print(min(data_participant$area_composite))
+print(max(data_participant$area_composite))
+
+print("AReA AA (mean, sd):")
+print(mean(data_participant$area_aes_apprec))
+print(sd(data_participant$area_aes_apprec))
+print(min(data_participant$area_aes_apprec))
+print(max(data_participant$area_aes_apprec))
+
+print("AReA IAE (mean, sd):")
+print(mean(data_participant$area_intense_aes_exp))
+print(sd(data_participant$area_intense_aes_exp))
+print(min(data_participant$area_intense_aes_exp))
+print(max(data_participant$area_intense_aes_exp))
+
+print("AReA CB (mean, sd):")
+print(mean(data_participant$area_creative_beh))
+print(sd(data_participant$area_creative_beh))
+print(min(data_participant$area_creative_beh))
+print(max(data_participant$area_creative_beh))
+```
+
+### Plot experiment-related person-level variables
+```{r}
+# clean up and plot ollen data
+ollenScale = c("non-musician", "music-loving non-musician", "amateur musician", "serious amateur musician", "semi-professional musician", "professional musician")
+
+ollen = table(data_participant$Ollen)
+ollen = data.frame(ollen)
+names(ollen) = c("Response","Participants")
+ollen$Response = ollenScale[1:5] # nobody chose professional!
+
+print("Musicianship (mean, median, std, min, max):")
+print(ollen)
+describe(ollen$Participants)
+
+# order Ollen properly
+ollen <- within(ollen, Response <- factor(Response, levels=ollenScale))
+
+# create barplot
+# png("Kentler_ollen.png", units="in", width=8, height=5, res=300)
+ggplot(ollen, aes(x=Response, y=Participants)) + 
+  geom_bar(stat = "identity") + coord_flip() + theme_classic() + theme(text = element_text(size = 20))
+
+# Plot area data
+ggplot(data_participant, aes(x=area_composite)) + 
+  geom_histogram(bins = 20) + ggtitle("AReA composite score")
+
+
+# Plot enjoyment data
+ggplot(data_participant, aes(x=overall_enjoy)) + 
+  geom_histogram(bins = 25) + ggtitle("Overall enjoyment of the experiment")
+
+ggplot(data_participant, aes(x=realWorldLikelihood)) + 
+  geom_histogram(bins = 25) + ggtitle("Likelihood of seeking similar pieces in real world")
+
+print("Enjoyment")
+print(mean(data_participant$overall_enjoy, na.rm=T))
+print(sd(data_participant$overall_enjoy, na.rm=T))
+
+print("Likelihood")
+print(mean(data_participant$realWorldLikelihood, na.rm=T))
+print(sd(data_participant$realWorldLikelihood, na.rm=T))
+
+# plot relation between enjoyment and likelihood
+p <- ggplot(data_participant, aes(x=overall_enjoy, y=realWorldLikelihood)) +
+  geom_point() + geom_smooth(method=lm , color="black", fill="gray", se=TRUE) +
+  theme(legend.position="none") + theme_classic()
+
+# Custom marginal plots:
+p2 <- ggMarginal(p, type="densigram", fill = "gray") 
+p2 
+
+# Self-reported modality prefs
+# create barplot of modality preferences
+mpref = data.frame(modality_pref)
+names(mpref) = c("Response","Participants")
+
+
+# png("Kentler_preference.png", units="in", width=8, height=5, res=300) 
+ggplot(mpref, aes(x=Response, y=Participants)) + 
+  geom_bar(stat = "identity") + coord_flip() + theme_classic() + theme(text = element_text(size = 20))
+```
+### Plot relationship between all person-level vars
+```{r}
+# create data frame for correlation
+# need to convert categorical to numeric 
+corrdf = data_participant[ , which(names(data_participant) %in% c("Ollen", "Modality_Preference", "overall_enjoy", "realWorldLikelihood", "area_aes_apprec", "area_intense_aes_exp", "area_creative_beh", "area_composite"))] 
+
+corrdf$Modality_Preference = as.numeric(as.factor(corrdf$Modality_Preference))
+corrdf$Ollen = as.numeric(as.factor(corrdf$Ollen))
+
+chart.Correlation(corrdf, histogram=TRUE, pch=25, text.panel=labs)
+```
+
+# Condition-level analyses
+
+### Create tables of means
+Z-score ratings data within scale, participant  
+Calculate table of means for all participants / conditions
+- do this for both z-scored and raw data in case we want to compare
+```{r}
+# create zscore function
+zscore <- function(input){
+  out = (input - mean(input))/sd(input)
+}
+
+# zscore data
+zscored = data_task %>%
+  group_by(exp_subject_id) %>%
+  mutate(z_enjoy = zscore(enjoy_), z_interesting = zscore(interestingness_), z_mood_cong = zscore(mood.congruency_), z_moved = zscore(move_))
+# NOTE zscoring correspondence needs to be done only for AV conditions
+
+# get means of zscored data
+z_means = zscored %>%
+  group_by(exp_subject_id, condition) %>%
+  summarise(mean_timespent = mean(Frame.Time.), mean_enjoy = mean(z_enjoy), mean_interesting = mean(z_interesting), mean_mood_cong = mean(z_mood_cong), mean_moved = mean(z_moved))
+
+
+# get means of zscored data
+# z_means_participant = z_means %>%
+#   group_by(exp_subject_id) %>%
+#   summarise(mean_timespent = mean(mean_timespent), mean_enjoy = mean(mean_enjoy), mean_interesting = mean(mean_interesting), mean_mood_cong = mean(mean_mood_cong), mean_moved = mean(mean_moved))
+# 
+
+# get raw means in case want to compare to zscored data
+means = data_task %>%
+  group_by(exp_subject_id, condition) %>%
+  summarise(mean_timespent = mean(Frame.Time.), mean_enjoy = mean(enjoy_), mean_interesting = mean(interestingness_), mean_mood_cong = mean(mood.congruency_), mean_moved = mean(move_), mean_corresp = mean(correspondence_))
+
+# get raw sds in case want to compare to zscored data
+sds = data_task %>%
+  group_by(exp_subject_id, condition) %>%
+  summarise(mean_timespent = sd(Frame.Time.), mean_enjoy = sd(enjoy_), mean_interesting = sd(interestingness_), mean_mood_cong = sd(mood.congruency_), mean_moved = sd(move_), mean_corresp = sd(correspondence_))
+
+```
+
+
+### Create custom functions for analysis and plotting
+We have multiple DVs on which we want to run the same type of analysis
+```{r}
+# Function to plot violins for each condition
+# Input: dataframe, variable to plot, title for plot
+plotViolin = function(data, groupvar, var, titstr, xlab, ylab){
+  
+  # define colors
+  AVR = '#8c1aff'
+  AVI = '#cc99ff'
+  V = '#ff4d4d'
+  A = '#6699ff'
+  ourcolors = c(A, AVI, AVR, V)
+  
+  # only AV conditions relevant
+  if (var == "z_corresp"){
+    ourcolors = c(AVI, AVR) 
+  }
+  
+  # Plot
+  var = sym(var)
+  groupvar = sym(groupvar)
+
+  pl = data %>%
+    ggplot(aes(x=!!groupvar, y=!!var, fill=!!groupvar)) +
+    geom_violin(legend = FALSE, trim = FALSE, adjust = 1, draw_quantiles = c(0.25, 0.75), size=.5, linetype = "dashed", color="white") + #.8 
+    geom_violin(legend = FALSE, trim = FALSE, adjust = 1, draw_quantiles = 0.5, fill="transparent", size=.85, color="black") + #1.2
+    
+    geom_jitter(size=0.4, alpha=0.6) +
+    scale_fill_manual(values=ourcolors) +
+    theme_classic() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+    ggtitle(titstr) +
+    xlab(xlab) +
+    ylab(ylab)
+  
+  return(pl)
+  
+}
+
+
+
+# Function to density ridge plots for each condition
+# Input: dataframe, variable to plot, title for plot
+plotRidges = function(data, groupvar, var, titstr, xlab, ylab){
+  
+  # define colors
+  AVR = '#CCBB44'
+  AVI = '#228833'
+  V = '#CC6677'
+  A = '#88CCEE'
+  ourcolors = c(A, AVI, AVR, V)
+  
+  # only AV conditions relevant
+  if (var == "z_corresp"){
+    ourcolors = c(AVI, AVR) 
+  }
+  
+  # Plot
+  var = sym(var)
+  groupvar = sym(groupvar)
+
+  pl = data %>%
+    ggplot(aes(x=!!var, y=!!groupvar, fill=!!groupvar)) +
+    geom_density_ridges(inherit.aes = TRUE, stat = "density_ridges", jittered_points = TRUE,
+      position = position_points_jitter(width = 0.05, height = 0),
+      point_shape = '|', point_size = 3, point_alpha = .9, alpha = 0.7) + 
+    # stat_density_ridges(quantile_lines = TRUE, quantiles = 0.5, color="white") +
+    geom_density_ridges(alpha = 0.85, quantile_lines=TRUE, 
+                        color="white", quantile_fun=function(var,...)mean(var)) +
+    scale_fill_manual(values=ourcolors) +
+    xlab(ylab) +
+    theme_ridges() + theme(legend.position = "none") +
+    theme(axis.title.x = element_text(hjust = 0.5)) + 
+          theme(axis.title.y=element_blank())
+  
+  return(pl)
+  
+}
+
+
+# Function to run rm anova and output stats
+runaov = function(id, dv, data, w){
+  fit = aov_ez(id,dv,data,within=w)
+  print(fit)
+  fit2 <- lsmeans(fit,specs = c(w))
+  contrast(fit2,method="pairwise",adjust="holm")
+}
+
+# Conditions to compare after ANOVAs
+my_comparisons <- list( c("Audio", "AV-Intended"), c("Audio", "AV-Random"), c("Audio", "Visual"), c("AV-Intended", "AV-Random"),  c("AV-Intended", "Visual"), c("AV-Random", "Visual"))
+my_comparisons = rev(my_comparisons) # reverse order so more readable on plots
+```
+
+
+## Time spent
+How much time did participants spend experiencing the pieces in the different conditions? Did they spend more time in one condition vs. another?
+```{r}
+z_means$logtime = log(z_means$mean_timespent)
+p = plotRidges(z_means, "condition", "mean_timespent", "", "Condition", "Mean Time Spent (secs)")
+plotTimeSecs = p + stat_compare_means(comparisons = my_comparisons, label = "p.signif", method = "t.test", paired = "true", na.rm=TRUE)
+
+p = plotRidges(z_means, "condition", "logtime", "", "", "Mean Time Spent (log secs)")
+plotTimeLog = p + stat_compare_means(comparisons = my_comparisons, label = "p.signif", method = "t.test", paired = "true", na.rm=TRUE)
+z_means$exp_subject_id = as.factor(z_means$exp_subject_id)
+
+runaov("exp_subject_id","mean_timespent", z_means, "condition")
+
+# print means and sds
+cond_means = z_means %>%
+  group_by(condition) %>%
+  summarise(mean_timespent = mean(mean_timespent, na.rm=T))   
+
+cond_sds = z_means %>%
+  group_by(condition) %>%
+  summarise(sd_timespent = sd(mean_timespent, na.rm=T))
+
+print(cond_means)
+print(cond_sds)
+
+plotTimeSecs
+plotTimeLog
+
+plotTimeSecs = plotTimeSecs + labs(title = "Time Spent", tag = "A") + theme(plot.title = element_text(hjust = 0.5, face='bold'), plot.tag = element_text(face='bold'))
+
+```
+
+We find a main effect of condition. Post-hoc tests show significant differences between all conditions, except AVI and AVR. Results do not change whether we use raw mean time spent or log of it. 
+
+
+
+## Enjoyment
+Did enjoyment differ by condition? (Q to participants: I enjoyed the piece (0-100))
+```{r}
+p = plotRidges(z_means, "condition", "mean_enjoy", "", "Condition", "Mean Enjoyment (z-score)")
+plotEnjoy = p + stat_compare_means(comparisons = my_comparisons, label = "p.signif", method = "t.test", paired = "true", na.rm=TRUE)
+runaov("exp_subject_id","mean_enjoy", z_means, "condition")
+plotEnjoy
+plotEnjoy = plotEnjoy + labs(title = "Enjoyment", tag = "C") + theme(plot.title = element_text(hjust = 0.5, face='bold'), plot.tag = element_text(face='bold'))
+```
+
+There is a significant main effect of condition on Enjoyment. Post-hoc contrasts show that AVI and AVR are higher in enjoyment than A, but not V, or each other. (V is also higher than A)
+So, even though people spent more time with audio, they enjoy more with visual. 
+
+## Interestingness
+Did interestingness differ by condition? (Q to participants: I found the piece interesting (0-100))
+```{r}
+p = plotRidges(z_means, "condition", "mean_interesting", "", "Condition", "Mean Interestingness (z-score)")
+plotInterest = p + stat_compare_means(comparisons = my_comparisons, label = "p.signif", method = "t.test", paired = "true", na.rm=TRUE)
+runaov("exp_subject_id","mean_interesting", z_means, "condition")
+plotInterest
+plotInterest = plotInterest + labs(title = "Interestingness", tag = "D") + theme(plot.title = element_text(hjust = 0.5, face='bold'), plot.tag = element_text(face='bold'))
+
+```
+
+These interestingness results are basically identical to the ones above for enjoyment. 
+
+## Mood Congruency
+Did participants feel the piece matched their current mood more in certain conditions? (Q to participants: The piece matched my current mood (0-100))
+```{r}
+p = plotRidges(z_means, "condition", "mean_mood_cong", "", "Condition", "Mean Mood Congruency (z-score)")
+plotMood = p + stat_compare_means(comparisons = my_comparisons, label = "p.signif", method = "t.test", paired = "true", na.rm=TRUE)
+runaov("exp_subject_id","mean_mood_cong", z_means, "condition")
+plotMood
+plotMood = plotMood + labs(title = "Mood Congruency", tag = "E") + theme(plot.title = element_text(hjust = 0.5, face='bold'), plot.tag = element_text(face='bold'))
+```
+
+There is a significant main effect of condition with repect to whether people think the piece matches their current mood. Post-hoc contrasts show that people are significantly more likely to say the piece matches their mood in V vs. A conditions. But no other post-hoc contrasts were significant.
+
+## Feeling moved
+Did participants feel moved by the piece more in certain conditions? (Q to participants: The piece moved me (0-100))
+```{r}
+p = plotRidges(z_means, "condition", "mean_moved", "", "Condition", "Mean Feeling Moved (z-score)")
+runaov("exp_subject_id","mean_moved", z_means, "condition")
+plotMoved = p + stat_compare_means(comparisons = my_comparisons, label = "p.signif", method = "t.test", paired = "true", na.rm=TRUE)
+plotMoved
+plotMoved = plotMoved + labs(title = "Feeling Moved", tag = "F") + theme(plot.title = element_text(hjust = 0.5, face='bold'), plot.tag = element_text(face='bold'))
+```
+
+Significant main effect of condition on feeling moved. Post-hoc tests shows no significant differences in feeling moved between A vs. V or between AVI vs. AVR, but all other contrasts were significant. This is interesting and potentially a "load" effect (i.e., bimodal is generally more moving than uni-modal)
+
+## Audio-visual correspondence
+Could participants tell above chance whether the audio and visual materials corresponded to one another? (Q to participants: To what degree did you feel there was a correspondence between the audio and visual sensations you were experiencing?)
+```{r}
+# only zscore within relevant AV conditions
+correspdata = data_task[data_task$condition == "AV-Intended" | data_task$condition == "AV-Random", ]
+zscored_corresp = correspdata %>%
+  group_by(exp_subject_id) %>%
+  mutate(z_corresp = zscore(correspondence_)) 
+
+mean_z_corresp = zscored_corresp %>%
+  group_by(exp_subject_id, condition) %>%
+  summarise(z_corresp = mean(z_corresp))
+
+# plot and calculate stats
+p <- plotRidges(mean_z_corresp, "condition", "z_corresp", "", "Condition", "Mean Correspondence (z-score)")
+plotAVcorresp = p + stat_compare_means(comparisons = list(c("AV-Intended", "AV-Random")), label = "p.signif", method = "t.test", paired="true", label.x.npc=.5)
+compare_means(z_corresp ~ condition,  data = mean_z_corresp, method = "t.test")
+plotAVcorresp
+plotAVcorresp = plotAVcorresp + labs(title = "Audiovisual Correspondence", tag = "B") + theme(plot.title = element_text(hjust = 0.5, face='bold'), plot.tag = element_text(face='bold'))
+ 
+```
+
+There is a significant difference between AVI and AVR conditions in terms of felt correspendence (i.e., particpants felt that the intentional pairings showed greater A-V correspondence than the random pairings). It is quite interesting then, that even though they could tell the difference in correspondence, there were no differences in terms of enjoyment, interestingness, etc. (see all prior plots and stats).
+
+
+# Figure 1 for paper
+Now create one figure which tiles all of our previous figures
+```{r}
+if (op) {tiff(paste(fig_path, "combined_DVs_ridge.tiff", sep=""), units="in", width=8.5, height=11, res=300)}
+grid.arrange(plotTimeSecs, plotAVcorresp, plotEnjoy, plotInterest, plotMood, plotMoved, ncol = 2)
+
+```
+
+
+
+
+
+
+
+
+
+
+# Supplementary Analysis (not included in the paper)
+
+## How do our different measures correlate with one another?
+Note, still 4 observations (one avg. rating for each condition) for every participant. 
+So should maybe actually do 4 separate correlation matrices and see if differences in structure based on modality?
+
+### Overall correlation with all conditions included
+```{r}
+# remove ratio diff and other columns we don't need 
+ratings = z_means[ , -which(names(z_means) %in% c("exp_subject_id","condition", "mean_corresp"))] # drop label columns and ones not using
+ratings$mean_timespent = log(ratings$mean_timespent)
+
+# Capture the plot so we can use it again later
+chart.Correlation(ratings, histogram=TRUE, pch=25, text.panel=labs)
+```
+
+### Correlations by condition
+Audio
+```{r}
+# remove ratio diff and other columns we don't need 
+ratings = subset(z_means, condition == 'Audio')
+ratings = ratings[ , -which(names(ratings) %in% c("exp_subject_id","condition", "mean_corresp"))] # drop label columns and ones not using
+ratings$mean_timespent = log(ratings$mean_timespent)
+
+chart.Correlation(ratings, histogram=TRUE, pch=25, text.panel=labs)
+```
+
+Visual
+```{r}
+# remove ratio diff and other columns we don't need 
+ratings = subset(z_means, condition == 'Visual')
+ratings = ratings[ , -which(names(ratings) %in% c("exp_subject_id","condition", "mean_corresp"))] # drop label columns and ones not using
+ratings$mean_timespent = log(ratings$mean_timespent)
+
+chart.Correlation(ratings, histogram=TRUE, pch=25, text.panel=labs)
+```
+
+AV intended
+```{r}
+# remove ratio diff and other columns we don't need 
+ratings = subset(z_means, condition == 'AV-Intended')
+corresp = subset(mean_z_corresp, condition == 'AV-Intended')
+#ratings$mean_corresp = mean_z_corresp
+ratings <- merge(x=ratings,y=corresp, 
+                by="exp_subject_id")
+ratings <- ratings %>% # rename
+  rename(mean_corresp = z_corresp)
+ratings = ratings[ , -which(names(ratings) %in% c("exp_subject_id","condition", "condition.x", "condition.y"))] 
+ratings$mean_timespent = log(ratings$mean_timespent)
+
+chart.Correlation(ratings, histogram=TRUE, pch=25, text.panel=labs)
+```
+
+
+AV random
+```{r}
+# remove ratio diff and other columns we don't need 
+ratings = subset(z_means, condition == 'AV-Random')
+corresp = subset(mean_z_corresp, condition == 'AV-Random')
+ratings <- merge(x=ratings,y=corresp, 
+                by="exp_subject_id")
+ratings <- ratings %>% # rename
+  rename(mean_corresp = z_corresp)
+ratings = ratings[ , -which(names(ratings) %in% c("exp_subject_id","condition", "condition.x", "condition.y"))] 
+ratings$mean_timespent = log(ratings$mean_timespent)
+
+
+chart.Correlation(ratings, histogram=TRUE, pch=25, text.panel=labs)
+```
+It seems our ratings scales and time spent measure show different relationships with each other, dependent on the condition. On the one hand this speaks against something like factor analysis to reduce dimensionality without taking condition into account. On the other hand, the rating scales consistently correlate with each other across conditions. Therefore, we could probably reduce the ratings, as we suggested in our pre-registration. Note that the relationship of the ratings with time spent does not change when using log time spent. 
+
+The above correlation matrices constitute Fig. 3 in the paper. 
+
+
+## Organize all data we want into one table
+```{r}
+# merge participants means and demo data
+pall = merge(data_participant, z_means, by="exp_subject_id")
+
+# remove columns we don't need 
+pall = pall[ , -which(names(pall) %in% c("country_current", "country_home","prev_exposure","area_intense_aes_exp","Modality_Preference_cat", "area_creative_beh","area_aes_apprec"))]  
+# "gender","Modality_Preference","Ollen",, "exp_subject_id","group_name",
+pall$mean_timespent = log(pall$mean_timespent)
+
+# make sure variable right type
+# Remove the 'option_' prefix and keep only the numbers for the ordered categorical columns
+data$Modality_Preference <- gsub('option_', '', data$Modality_Preference)
+# Convert the column to numeric
+data$Modality_Preference <- as.numeric(data$Modality_Preference)
+# Convert to ordered factor
+pall$Modality_Preference = factor(pall$Modality_Preference)
+
+# Do same for ollen scale
+data$Ollen <- gsub('option_', '', data$Ollen)
+data$Ollen <- as.numeric(data$Ollen)
+pall$Ollen = factor(pall$Ollen)
+
+# gender is unordered
+pall$gender = factor(pall$gender, ordered = F)
+
+#chart.Correlation(pall, histogram=TRUE, pch=25, text.panel=labs)
+```
+
+
+
+# Factor analysis on ratings data
+Check for suitability of FA
+```{r}
+# organize data
+forfa = z_means[ , -which(names(z_means) %in% c("mean_timespent","logtime", "condition","exp_subject_id", "factor_score"))] 
+
+# check for missing values
+nna = sum(is.na(forfa)) # 16 nas in the df
+# N.B. NAs have been introduced by z-scoring, due to dividing by zero (no variance)
+# Since the true mean was zero, it is fair to impute with zero 
+forfa$mean_enjoy[is.na(forfa$mean_enjoy)] <- 0
+forfa$mean_mood_cong[is.na(forfa$mean_mood_cong)] <- 0
+forfa$mean_moved[is.na(forfa$mean_moved)] <- 0
+forfa$mean_interesting[is.na(forfa$mean_interesting)] <- 0
+
+# Do tests to determine suitability for FA
+print("KMO")
+KMO(r=cor(forfa))
+print("Bartlett")
+cortest.bartlett(forfa)
+print("Determinant")
+det(cor(forfa))
+```
+Kaiser’s (1974) guidelines, suggest cutoff of KMO ≥ 60 for determining the factorability of the sample data. Here was are well above, suggesting suitability for FA. 
+P value for Bartlett's test is significant. Determinant is positive, indicating FA will likely run.
+
+## determine number of factors
+```{r}
+fafitfree <- fa(forfa, nfactors = ncol(forfa), rotate = "none")
+n_factors <- length(fafitfree$e.values)
+scree     <- data.frame(
+  Factor_n =  as.factor(1:n_factors), 
+  Eigenvalue = fafitfree$e.values)
+ggplot(scree, aes(x = Factor_n, y = Eigenvalue, group = 1)) + 
+  geom_point() + geom_line() +
+  xlab("Number of factors") +
+  ylab("Initial eigenvalue") +
+  labs( title = "Scree Plot", 
+        subtitle = "(Based on the unreduced correlation matrix)")
+```
+
+
+```{r}
+fa.none <- fa(r=forfa, 
+              nfactors = 1, 
+              fm="pa", # type of factor analysis we want to use (“pa” is principal axis factoring)
+              max.iter=100,
+              rotate="varimax") # none rotation
+print(fa.none)
+```
+
+## Concatenate scores with other data
+```{r}
+z_means['factor_score'] <- fa.none$scores
+```
+
+## Run same anova analyses as above but on factor score
+```{r}
+p = plotRidges(z_means, "condition", "factor_score", "", "Condition", "Mean Factor Score")
+runaov("exp_subject_id","factor_score", z_means, "condition") 
+factorPlot = p + stat_compare_means(comparisons = my_comparisons, label = "p.signif", method = "t.test", paired="True", na.rm=TRUE)
+factorPlot = factorPlot + labs(y = "Mean Factor Score (Aesthetic Experience)")
+factorPlot
+```
+It basically mimics enjoyment results, as that item has highest factor loading. But there was clearly something more interesting going on with all of the small differences in the ANOVAs reported above
+
+
+```{r}
+ratings = z_means[ , -which(names(z_means) %in% c("exp_subject_id","condition", "mean_corresp"))] # drop label columns and ones not using
+ratings$mean_timespent = log(ratings$mean_timespent)
+
+par(mfrow = c(3,1))
+chart.Correlation(ratings, histogram=TRUE, pch=25, text.panel=labs)
+fa.diagram(fa.none, digits=2, cut = .3, simple=TRUE)
+#factorPlot
+```
+
+
+# Exploratory analysis
+
+## Relationship between personal variables and time spent / feeling moved
+```{r}
+# merge mean table and participant level table
+df = pall
+
+# plot relation between enjoyment and likelihood
+p <- ggplot(df, aes(x=area_composite, y=mean_moved)) +
+  geom_point() + geom_smooth(method=lm , color="black", fill="gray", se=TRUE) +
+  theme(legend.position="none") + theme_classic()
+
+# Custom marginal plots:
+p2 <- ggMarginal(p, type="densigram", fill = "gray") 
+p2 
+
+
+# plot relation between enjoyment and likelihood
+p <- ggplot(df, aes(x=area_composite, y=mean_timespent)) +
+  geom_point() + geom_smooth(method=lm , color="black", fill="gray", se=TRUE) +
+  theme(legend.position="none") + theme_classic()
+
+# Custom marginal plots:
+p2 <- ggMarginal(p, type="densigram", fill = "gray") 
+p2 
+
+```
+I would have expected a relationship between area and some of the aesthetic measures. 
+
+
+
+
+
+
+
+
+
+
