@@ -13,7 +13,7 @@ This project is a collaboration with the Kentler International Drawing Space. Th
 
 View the catalog from the exhibition here: [https://www.flipsnack.com/bobartlettcenter/music-as-image-and-metaphor.html](https://www.flipsnack.com/bobartlettcenter/music-as-image-and-metaphor.html)
 
-![Screenshot of catalog cover](figures/Kentler_catalog_cover.png)(https://www.flipsnack.com/bobartlettcenter/music-as-image-and-metaphor.html)
+![Screenshot of catalog cover](https://www.flipsnack.com/bobartlettcenter/music-as-image-and-metaphor.html)
 
 In March 2023, during the final weeks of the exhibition at the Kentler, Lauren Fink joined a panel discussion with the curators and composers (David Houston, Florence Neal, Michael Kowalski, Allen Otte). Watch the hour+ discussion about the curation, composition, and scientific process here: [https://www.kentlergallery.org/Detail/events/540](https://www.kentlergallery.org/Detail/events/540)
 
