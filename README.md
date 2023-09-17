@@ -13,6 +13,8 @@ This project is a collaboration with the Kentler International Drawing Space. Th
 
 View the catalog from the exhibition here: [https://www.flipsnack.com/bobartlettcenter/music-as-image-and-metaphor.html](https://www.flipsnack.com/bobartlettcenter/music-as-image-and-metaphor.html)
 
+![Screenshot of catalog cover](figures/Kentler_catalog_cover.png)(https://www.flipsnack.com/bobartlettcenter/music-as-image-and-metaphor.html)
+
 In March 2023, during the final weeks of the exhibition at the Kentler, Lauren Fink joined a panel discussion with the curators and composers (David Houston, Florence Neal, Michael Kowalski, Allen Otte). Watch the hour+ discussion about the curation, composition, and scientific process here: [https://www.kentlergallery.org/Detail/events/540](https://www.kentlergallery.org/Detail/events/540)
 
 You can view a demo of the online scientific experiment here: [https://www.labvanced.com/player.html?id=33023](https://www.labvanced.com/player.html?id=33023)
@@ -29,10 +31,11 @@ The `dependencies.R` file contains all required packages to run the analyses.
 As long as the required packages are installed and the directory structure of this repository is unchanged, all code should run on your local machine. 
 
 The core analysis script is `Fink_Kentler_analyses.Rmd`.
+To preview the code in a non-executable way, an html file is included: `Fink_Kentler_analyses.nb.html`
 
 Data are in the `data.csv`. 
 
-The `figures` folder contains images submitted for publication. 
+The `figures` folder contains images submitted for publication, and images used in this README.md file.
 By default, the Rmd notebook will plot figures in line. If saving to file is preferred, set op = 1 near the top of the notebook. 
 
 ## More
