@@ -1,7 +1,7 @@
 # Cross-modal correspondence between contemporary music & art
 This repository contains data and code for reproducing the analyses reported in: 
 
-Fink, L., Fiehn, H. & Wald-Furhmann, M. (2023). The role of audiovisual congruence in perception and aesthetic appreciation of contemporary music and visual art.
+Fink, L., Fiehn, H. & Wald-Furhmann, M. (2023). The role of audiovisual congruence in perception and aesthetic appreciation of contemporary music and visual art. *Pre-print available at:* [osf.io/hjgc5/](osf.io/hjgc5/)
 
 If using anything from this repository, please cite the paper. 
 
