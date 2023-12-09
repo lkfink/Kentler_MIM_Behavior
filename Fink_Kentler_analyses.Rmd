@@ -7,13 +7,11 @@ contact: finkl1@mcmaster.ca
 
 This notebook accompanies the manuscript:
 
-Fink & Fiehn (2023). The role of audiovisual congruence in perception and aesthetic appreciation of contemporary music and visual art.
+Fink, Fiehn & Wald-Fuhrmann (2023). The role of audiovisual congruence in perception and aesthetic appreciation of contemporary music and visual art. *Pre-print available at:* [osf.io/hjgc5/](osf.io/hjgc5/)
 
 If using any code or data from this notebook, please cite the paper. 
-[DOI forthcoming]
 
 # Load and preprocess data
-
 Turn off warnings for cleaner submission file. N.B. users of this file should turn warnings on for troubleshooting
 ```{r setup, include=FALSE} 
 knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
@@ -153,25 +151,25 @@ print("Unique countries:")
 print(ncountries)
 print(countries)
 
-print("AReA (mean, sd):")
+print("AReA (mean, sd, min, max):")
 print(mean(data_participant$area_composite))
 print(sd(data_participant$area_composite))
 print(min(data_participant$area_composite))
 print(max(data_participant$area_composite))
 
-print("AReA AA (mean, sd):")
+print("AReA AA (mean, sd, min, max):")
 print(mean(data_participant$area_aes_apprec))
 print(sd(data_participant$area_aes_apprec))
 print(min(data_participant$area_aes_apprec))
 print(max(data_participant$area_aes_apprec))
 
-print("AReA IAE (mean, sd):")
+print("AReA IAE (mean, sd, min, max):")
 print(mean(data_participant$area_intense_aes_exp))
 print(sd(data_participant$area_intense_aes_exp))
 print(min(data_participant$area_intense_aes_exp))
 print(max(data_participant$area_intense_aes_exp))
 
-print("AReA CB (mean, sd):")
+print("AReA CB (mean, sd, min, max):")
 print(mean(data_participant$area_creative_beh))
 print(sd(data_participant$area_creative_beh))
 print(min(data_participant$area_creative_beh))
@@ -188,7 +186,6 @@ ollen = data.frame(ollen)
 names(ollen) = c("Response","Participants")
 ollen$Response = ollenScale[1:5] # nobody chose professional!
 
-print("Musicianship (mean, median, std, min, max):")
 print(ollen)
 describe(ollen$Participants)
 
@@ -212,11 +209,11 @@ ggplot(data_participant, aes(x=overall_enjoy)) +
 ggplot(data_participant, aes(x=realWorldLikelihood)) + 
   geom_histogram(bins = 25) + ggtitle("Likelihood of seeking similar pieces in real world")
 
-print("Enjoyment")
+print("Enjoyment (mean, sd)")
 print(mean(data_participant$overall_enjoy, na.rm=T))
 print(sd(data_participant$overall_enjoy, na.rm=T))
 
-print("Likelihood")
+print("Likelihood (mean, sd)")
 print(mean(data_participant$realWorldLikelihood, na.rm=T))
 print(sd(data_participant$realWorldLikelihood, na.rm=T))
 
@@ -233,6 +230,7 @@ p2
 # create barplot of modality preferences
 mpref = data.frame(modality_pref)
 names(mpref) = c("Response","Participants")
+mpref$percent = mpref$Participants / sum(mpref$Participants)
 
 
 # png("Kentler_preference.png", units="in", width=8, height=5, res=300) 
@@ -339,7 +337,7 @@ plotViolin = function(data, groupvar, var, titstr, xlab, ylab){
 
 
 
-# Function to density ridge plots for each condition
+# Function to create density ridge plots for each condition
 # Input: dataframe, variable to plot, title for plot
 plotRidges = function(data, groupvar, var, titstr, xlab, ylab){
   
@@ -361,12 +359,17 @@ plotRidges = function(data, groupvar, var, titstr, xlab, ylab){
 
   pl = data %>%
     ggplot(aes(x=!!var, y=!!groupvar, fill=!!groupvar)) +
-    geom_density_ridges(inherit.aes = TRUE, stat = "density_ridges", jittered_points = TRUE,
+    
+   # stat_density_ridges(quantile_lines=TRUE, quantiles = c(0.025, 0.975), color="black", alpha = 1) +
+    
+    geom_density_ridges(inherit.aes = TRUE, jittered_points = TRUE, stat ="density_ridges",
       position = position_points_jitter(width = 0.05, height = 0),
-      point_shape = '|', point_size = 3, point_alpha = .9, alpha = 0.7) + 
-    # stat_density_ridges(quantile_lines = TRUE, quantiles = 0.5, color="white") +
-    geom_density_ridges(alpha = 0.85, quantile_lines=TRUE, 
+      point_shape = '|', point_size = 3, point_alpha = .9, alpha = 0.7) +
+    
+    geom_density_ridges(alpha = 0.85, quantile_lines=TRUE,
                         color="white", quantile_fun=function(var,...)mean(var)) +
+
+
     scale_fill_manual(values=ourcolors) +
     xlab(ylab) +
     theme_ridges() + theme(legend.position = "none") +
@@ -523,8 +526,8 @@ grid.arrange(plotTimeSecs, plotAVcorresp, plotEnjoy, plotInterest, plotMood, plo
 # Supplementary Analysis (not included in the paper)
 
 ## How do our different measures correlate with one another?
-Note, still 4 observations (one avg. rating for each condition) for every participant. 
-So should maybe actually do 4 separate correlation matrices and see if differences in structure based on modality?
+Note, 4 observations per condition for every participant. Can avg by participant.
+Construct 4 separate correlation matrices and see if differences in structure based on modality?
 
 ### Overall correlation with all conditions included
 ```{r}
@@ -537,7 +540,7 @@ chart.Correlation(ratings, histogram=TRUE, pch=25, text.panel=labs)
 ```
 
 ### Correlations by condition
-Audio
+#### Audio
 ```{r}
 # remove ratio diff and other columns we don't need 
 ratings = subset(z_means, condition == 'Audio')
@@ -547,7 +550,7 @@ ratings$mean_timespent = log(ratings$mean_timespent)
 chart.Correlation(ratings, histogram=TRUE, pch=25, text.panel=labs)
 ```
 
-Visual
+#### Visual
 ```{r}
 # remove ratio diff and other columns we don't need 
 ratings = subset(z_means, condition == 'Visual')
@@ -557,7 +560,7 @@ ratings$mean_timespent = log(ratings$mean_timespent)
 chart.Correlation(ratings, histogram=TRUE, pch=25, text.panel=labs)
 ```
 
-AV intended
+#### AV-Intended
 ```{r}
 # remove ratio diff and other columns we don't need 
 ratings = subset(z_means, condition == 'AV-Intended')
@@ -574,7 +577,7 @@ chart.Correlation(ratings, histogram=TRUE, pch=25, text.panel=labs)
 ```
 
 
-AV random
+#### AV-random
 ```{r}
 # remove ratio diff and other columns we don't need 
 ratings = subset(z_means, condition == 'AV-Random')
@@ -591,8 +594,9 @@ chart.Correlation(ratings, histogram=TRUE, pch=25, text.panel=labs)
 ```
 It seems our ratings scales and time spent measure show different relationships with each other, dependent on the condition. On the one hand this speaks against something like factor analysis to reduce dimensionality without taking condition into account. On the other hand, the rating scales consistently correlate with each other across conditions. Therefore, we could probably reduce the ratings, as we suggested in our pre-registration. Note that the relationship of the ratings with time spent does not change when using log time spent. 
 
-The above correlation matrices constitute Fig. 3 in the paper. 
 
+
+# Factor analysis on ratings data
 
 ## Organize all data we want into one table
 ```{r}
@@ -625,8 +629,7 @@ pall$gender = factor(pall$gender, ordered = F)
 
 
 
-# Factor analysis on ratings data
-Check for suitability of FA
+## Check for suitability of FA
 ```{r}
 # organize data
 forfa = z_means[ , -which(names(z_means) %in% c("mean_timespent","logtime", "condition","exp_subject_id", "factor_score"))] 
@@ -651,7 +654,7 @@ det(cor(forfa))
 Kaiser’s (1974) guidelines, suggest cutoff of KMO ≥ 60 for determining the factorability of the sample data. Here was are well above, suggesting suitability for FA. 
 P value for Bartlett's test is significant. Determinant is positive, indicating FA will likely run.
 
-## determine number of factors
+## Determine number of factors
 ```{r}
 fafitfree <- fa(forfa, nfactors = ncol(forfa), rotate = "none")
 n_factors <- length(fafitfree$e.values)
@@ -730,7 +733,8 @@ p2 <- ggMarginal(p, type="densigram", fill = "gray")
 p2 
 
 ```
-I would have expected a relationship between area and some of the aesthetic measures. 
+I would have expected a relationship between AReA and some of the aesthetic measures. 
+Perhaps AReA more relevant for visual modality. Break out by modality? 
 
 
 
