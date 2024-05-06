@@ -9,17 +9,17 @@ If using anything from this repository, please cite the paper.
 While low-level, cross-modal correspondences between vision and hearing are well-documented (e.g., Kiki-Bouba effect), it is unclear whether cross-modal correspondences are perceivable between complex, multi-dimensional stimuli, like contemporary music and art. Further, previous studies show conflicting results regarding whether audiovisual correspondence affects subjective aesthetic experience. Here, in collaboration with the Kentler International Drawing Space (NYC, USA), we use material from the Music as Image and Metaphor exhibition, consisting of music composed for each work of visual art. Our pre-registered online experiment consisted of 4 conditions: Audio, Visual, Audio-Visual-Intended (artist-intended pairing of art/music), and Audio-Visual-Random (random shuffling). Participants (N=201) were presented with 16 pieces and could click to proceed to the next piece whenever they liked. After each piece, they were asked about their subjective experience. Analyzing results by condition, we found that participants spent significantly more time with Audio, followed by Audiovisual, followed by Visual pieces; however, they felt most moved in the Audiovisual (bi-modal) conditions. The Audiovisual-Intended pieces were perceived to have greater correspondence than those in the Audiovisual-Random condition. Interestingly, though, there were no significant differences for these two conditions on any other subjective rating scale or for time spent. Collectively, these results extend our understanding of cross-modal correspondence to complex, professional, real-world abstract art and contemporary music, and call into question the use of time spent as an implicit measure of aesthetic appreciation in multi-modal conditions.
 
 ## Relevant Links
-This project is a collaboration with the Kentler International Drawing Space. Their online exhibition of *Music as Image and Metaphor* is available here: [https://www.kentlergallery.org/Detail/exhibitions/442](https://www.kentlergallery.org/Detail/exhibitions/442)
+This project is a collaboration with the Kentler International Drawing Space. Their online exhibition of *Music as Image and Metaphor* is available here: [https://www.kentlergallery.org/Detail/exhibitions/442](https://www.kentlergallery.org/Detail/exhibitions/442){:target="_blank"}
 
-View the catalog from the exhibition here: [https://www.flipsnack.com/bobartlettcenter/music-as-image-and-metaphor.html](https://www.flipsnack.com/bobartlettcenter/music-as-image-and-metaphor.html)
+View the catalog from the exhibition here: [https://www.flipsnack.com/bobartlettcenter/music-as-image-and-metaphor.html](https://www.flipsnack.com/bobartlettcenter/music-as-image-and-metaphor.html){:target="_blank"}
 
-[<img src="figures/Kentler_catalog_cover.png">](https://www.flipsnack.com/bobartlettcenter/music-as-image-and-metaphor.html)
+[<img src="figures/Kentler_catalog_cover.png">](https://www.flipsnack.com/bobartlettcenter/music-as-image-and-metaphor.html){:target="_blank"}
 
-In March 2023, during the final weeks of the exhibition at the Kentler, Lauren Fink joined a panel discussion with the curators and composers (David Houston, Florence Neal, Michael Kowalski, Allen Otte). Watch the hour+ discussion about the curation, composition, and scientific process here: [https://www.kentlergallery.org/Detail/events/540](https://www.kentlergallery.org/Detail/events/540)
+In March 2023, during the final weeks of the exhibition at the Kentler, Lauren Fink joined a panel discussion with the curators and composers (David Houston, Florence Neal, Michael Kowalski, Allen Otte). Watch the hour+ discussion about the curation, composition, and scientific process here: [https://www.kentlergallery.org/Detail/events/540](https://www.kentlergallery.org/Detail/events/540){:target="_blank"}
 
-You can view a demo of the online scientific experiment here: [https://www.labvanced.com/player.html?id=33023](https://www.labvanced.com/player.html?id=33023)
+You can view a demo of the online scientific experiment here: [https://www.labvanced.com/player.html?id=33023](https://www.labvanced.com/player.html?id=33023){:target="_blank"}
 
-The pre-registration of experimental design and analyses is available here: [https://osf.io/hjgc5/](https://osf.io/hjgc5/)
+The pre-registration of experimental design and analyses is available here: [https://osf.io/hjgc5/](https://osf.io/hjgc5/){:target="_blank"}
 
 # About this repository
 
