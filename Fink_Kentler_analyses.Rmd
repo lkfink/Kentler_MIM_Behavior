@@ -28,7 +28,7 @@ if(length(new.packages)) install.packages(new.packages)
 We use the **here** package so that all file paths are relative. Users should be sure not to change the directory structure of the repository. 
 By default, figures will be plotted in line. If you want to save the figures to a folder on your local machine, set op = 1. 
 ```{r}
-here::i_am("Kentler_analyses.Rmd")
+here::i_am("Fink_Kentler_analyses.Rmd")
 library(here)
 source(here("dependencies.R"))
 data <- read.csv(here("data.csv")) 
@@ -317,12 +317,13 @@ plotViolin = function(data, groupvar, var, titstr, xlab, ylab){
 
   pl = data %>%
     ggplot(aes(x=!!groupvar, y=!!var, fill=!!groupvar)) +
-    geom_violin(legend = FALSE, trim = FALSE, adjust = 1, draw_quantiles = c(0.25, 0.75), size=.5, linetype = "dashed", color="white") + #.8 
+    geom_violin(legend = FALSE, trim = FALSE, adjust = 1, draw_quantiles = c(0.25, 0.75), size=.5, linetype = "dashed", color="black") + #.8 
     geom_violin(legend = FALSE, trim = FALSE, adjust = 1, draw_quantiles = 0.5, fill="transparent", size=.85, color="black") + #1.2
     
-    geom_jitter(size=0.4, alpha=0.6) +
+    geom_jitter(size=0.4, alpha=0.6, color="gray") +
     scale_fill_manual(values=ourcolors) +
-    theme_classic() +
+    #theme_classic() +
+    theme_ridges() +
     theme(
       legend.position="none",
       plot.title = element_text(size=11)
@@ -368,8 +369,7 @@ plotRidges = function(data, groupvar, var, titstr, xlab, ylab){
     
     geom_density_ridges(alpha = 0.85, quantile_lines=TRUE,
                         color="white", quantile_fun=function(var,...)mean(var)) +
-
-
+    
     scale_fill_manual(values=ourcolors) +
     xlab(ylab) +
     theme_ridges() + theme(legend.position = "none") +
@@ -392,18 +392,21 @@ runaov = function(id, dv, data, w){
 # Conditions to compare after ANOVAs
 my_comparisons <- list( c("Audio", "AV-Intended"), c("Audio", "AV-Random"), c("Audio", "Visual"), c("AV-Intended", "AV-Random"),  c("AV-Intended", "Visual"), c("AV-Random", "Visual"))
 my_comparisons = rev(my_comparisons) # reverse order so more readable on plots
-```
 
+# Choose plotting style (violin or ridge) for future plots
+customplot = plotRidges
+hide_ns = FALSE
+```
 
 ## Time spent
 How much time did participants spend experiencing the pieces in the different conditions? Did they spend more time in one condition vs. another?
 ```{r}
 z_means$logtime = log(z_means$mean_timespent)
-p = plotRidges(z_means, "condition", "mean_timespent", "", "Condition", "Mean Time Spent (secs)")
-plotTimeSecs = p + stat_compare_means(comparisons = my_comparisons, label = "p.signif", method = "t.test", paired = "true", na.rm=TRUE)
+p = customplot(z_means, "condition", "mean_timespent", "", "Condition", "Mean Time Spent (secs)")
+plotTimeSecs = p + stat_compare_means(comparisons = my_comparisons, label = "p.signif", method = "t.test", paired = "true", na.rm=TRUE, hide.ns=hide_ns)
 
-p = plotRidges(z_means, "condition", "logtime", "", "", "Mean Time Spent (log secs)")
-plotTimeLog = p + stat_compare_means(comparisons = my_comparisons, label = "p.signif", method = "t.test", paired = "true", na.rm=TRUE)
+p = customplot(z_means, "condition", "logtime", "", "", "Mean Time Spent (log secs)")
+plotTimeLog = p + stat_compare_means(comparisons = my_comparisons, label = "p.signif", method = "t.test", paired = "true", na.rm=TRUE, hide.ns=hide_ns)
 z_means$exp_subject_id = as.factor(z_means$exp_subject_id)
 
 runaov("exp_subject_id","mean_timespent", z_means, "condition")
@@ -424,7 +427,6 @@ plotTimeSecs
 plotTimeLog
 
 plotTimeSecs = plotTimeSecs + labs(title = "Time Spent", tag = "A") + theme(plot.title = element_text(hjust = 0.5, face='bold'), plot.tag = element_text(face='bold'))
-
 ```
 
 We find a main effect of condition. Post-hoc tests show significant differences between all conditions, except AVI and AVR. Results do not change whether we use raw mean time spent or log of it. 
@@ -434,8 +436,8 @@ We find a main effect of condition. Post-hoc tests show significant differences 
 ## Enjoyment
 Did enjoyment differ by condition? (Q to participants: I enjoyed the piece (0-100))
 ```{r}
-p = plotRidges(z_means, "condition", "mean_enjoy", "", "Condition", "Mean Enjoyment (z-score)")
-plotEnjoy = p + stat_compare_means(comparisons = my_comparisons, label = "p.signif", method = "t.test", paired = "true", na.rm=TRUE)
+p = customplot(z_means, "condition", "mean_enjoy", "", "Condition", "Mean Enjoyment (z-score)")
+plotEnjoy = p + stat_compare_means(comparisons = my_comparisons, label = "p.signif", method = "t.test", paired = "true", na.rm=TRUE, hide.ns=hide_ns)
 runaov("exp_subject_id","mean_enjoy", z_means, "condition")
 plotEnjoy
 plotEnjoy = plotEnjoy + labs(title = "Enjoyment", tag = "C") + theme(plot.title = element_text(hjust = 0.5, face='bold'), plot.tag = element_text(face='bold'))
@@ -447,8 +449,8 @@ So, even though people spent more time with audio, they enjoy more with visual.
 ## Interestingness
 Did interestingness differ by condition? (Q to participants: I found the piece interesting (0-100))
 ```{r}
-p = plotRidges(z_means, "condition", "mean_interesting", "", "Condition", "Mean Interestingness (z-score)")
-plotInterest = p + stat_compare_means(comparisons = my_comparisons, label = "p.signif", method = "t.test", paired = "true", na.rm=TRUE)
+p = customplot(z_means, "condition", "mean_interesting", "", "Condition", "Mean Interestingness (z-score)")
+plotInterest = p + stat_compare_means(comparisons = my_comparisons, label = "p.signif", method = "t.test", paired = "true", na.rm=TRUE, hide.ns=hide_ns)
 runaov("exp_subject_id","mean_interesting", z_means, "condition")
 plotInterest
 plotInterest = plotInterest + labs(title = "Interestingness", tag = "D") + theme(plot.title = element_text(hjust = 0.5, face='bold'), plot.tag = element_text(face='bold'))
@@ -460,8 +462,8 @@ These interestingness results are basically identical to the ones above for enjo
 ## Mood Congruency
 Did participants feel the piece matched their current mood more in certain conditions? (Q to participants: The piece matched my current mood (0-100))
 ```{r}
-p = plotRidges(z_means, "condition", "mean_mood_cong", "", "Condition", "Mean Mood Congruency (z-score)")
-plotMood = p + stat_compare_means(comparisons = my_comparisons, label = "p.signif", method = "t.test", paired = "true", na.rm=TRUE)
+p = customplot(z_means, "condition", "mean_mood_cong", "", "Condition", "Mean Mood Congruency (z-score)")
+plotMood = p + stat_compare_means(comparisons = my_comparisons, label = "p.signif", method = "t.test", paired = "true", na.rm=TRUE, hide.ns=hide_ns)
 runaov("exp_subject_id","mean_mood_cong", z_means, "condition")
 plotMood
 plotMood = plotMood + labs(title = "Mood Congruency", tag = "E") + theme(plot.title = element_text(hjust = 0.5, face='bold'), plot.tag = element_text(face='bold'))
@@ -472,9 +474,9 @@ There is a significant main effect of condition with repect to whether people th
 ## Feeling moved
 Did participants feel moved by the piece more in certain conditions? (Q to participants: The piece moved me (0-100))
 ```{r}
-p = plotRidges(z_means, "condition", "mean_moved", "", "Condition", "Mean Feeling Moved (z-score)")
+p = customplot(z_means, "condition", "mean_moved", "", "Condition", "Mean Feeling Moved (z-score)")
 runaov("exp_subject_id","mean_moved", z_means, "condition")
-plotMoved = p + stat_compare_means(comparisons = my_comparisons, label = "p.signif", method = "t.test", paired = "true", na.rm=TRUE)
+plotMoved = p + stat_compare_means(comparisons = my_comparisons, label = "p.signif", method = "t.test", paired = "true", na.rm=TRUE, hide.ns=hide_ns)
 plotMoved
 plotMoved = plotMoved + labs(title = "Feeling Moved", tag = "F") + theme(plot.title = element_text(hjust = 0.5, face='bold'), plot.tag = element_text(face='bold'))
 ```
@@ -495,9 +497,9 @@ mean_z_corresp = zscored_corresp %>%
   summarise(z_corresp = mean(z_corresp))
 
 # plot and calculate stats
-p <- plotRidges(mean_z_corresp, "condition", "z_corresp", "", "Condition", "Mean Correspondence (z-score)")
+p <- customplot(mean_z_corresp, "condition", "z_corresp", "", "Condition", "Mean Correspondence (z-score)")
 plotAVcorresp = p + stat_compare_means(comparisons = list(c("AV-Intended", "AV-Random")), label = "p.signif", method = "t.test", paired="true", label.x.npc=.5)
-compare_means(z_corresp ~ condition,  data = mean_z_corresp, method = "t.test")
+compare_means(z_corresp ~ condition,  data = mean_z_corresp, method = "t.test", hide.ns=hide_ns)
 plotAVcorresp
 plotAVcorresp = plotAVcorresp + labs(title = "Audiovisual Correspondence", tag = "B") + theme(plot.title = element_text(hjust = 0.5, face='bold'), plot.tag = element_text(face='bold'))
  
@@ -509,14 +511,15 @@ There is a significant difference between AVI and AVR conditions in terms of fel
 # Figure 1 for paper
 Now create one figure which tiles all of our previous figures
 ```{r}
-if (op) {tiff(paste(fig_path, "combined_DVs_ridge.tiff", sep=""), units="in", width=8.5, height=11, res=300)}
-grid.arrange(plotTimeSecs, plotAVcorresp, plotEnjoy, plotInterest, plotMood, plotMoved, ncol = 2)
+if (op) {tiff(paste(fig_path, "combined_DVs_ridge_r1.tiff", sep=""), units="in", width=9, height=11, res=300)}
+plotAll = grid.arrange(plotTimeSecs, plotAVcorresp, plotEnjoy, plotInterest, plotMood, plotMoved, ncol = 2)
+plotAll
+
+ggsave("combined_DVs_ridge_r1.svg", plotAll, width=9, height=11, units = "in")
 
 ```
 
-
-
-
+NOTE: In final, publication-ready figure, I manually removed non-significant comparison brackets, as well as brackets with p values that did not withstand multiple comparisons. 
 
 
 
@@ -532,8 +535,8 @@ Construct 4 separate correlation matrices and see if differences in structure ba
 ### Overall correlation with all conditions included
 ```{r}
 # remove ratio diff and other columns we don't need 
-ratings = z_means[ , -which(names(z_means) %in% c("exp_subject_id","condition", "mean_corresp"))] # drop label columns and ones not using
-ratings$mean_timespent = log(ratings$mean_timespent)
+ratings = z_means[ , -which(names(z_means) %in% c("exp_subject_id","condition", "mean_corresp", "logtime"))] # drop label columns and ones not using
+ratings$mean_timespent = log(ratings$mean_timespent) # TODO check if want to do this or not
 
 # Capture the plot so we can use it again later
 chart.Correlation(ratings, histogram=TRUE, pch=25, text.panel=labs)
@@ -544,7 +547,7 @@ chart.Correlation(ratings, histogram=TRUE, pch=25, text.panel=labs)
 ```{r}
 # remove ratio diff and other columns we don't need 
 ratings = subset(z_means, condition == 'Audio')
-ratings = ratings[ , -which(names(ratings) %in% c("exp_subject_id","condition", "mean_corresp"))] # drop label columns and ones not using
+ratings = ratings[ , -which(names(ratings) %in% c("exp_subject_id","condition", "mean_corresp", "logtime"))] # drop label columns and ones not using
 ratings$mean_timespent = log(ratings$mean_timespent)
 
 chart.Correlation(ratings, histogram=TRUE, pch=25, text.panel=labs)
@@ -554,7 +557,7 @@ chart.Correlation(ratings, histogram=TRUE, pch=25, text.panel=labs)
 ```{r}
 # remove ratio diff and other columns we don't need 
 ratings = subset(z_means, condition == 'Visual')
-ratings = ratings[ , -which(names(ratings) %in% c("exp_subject_id","condition", "mean_corresp"))] # drop label columns and ones not using
+ratings = ratings[ , -which(names(ratings) %in% c("exp_subject_id","condition", "mean_corresp", "logtime"))] # drop label columns and ones not using
 ratings$mean_timespent = log(ratings$mean_timespent)
 
 chart.Correlation(ratings, histogram=TRUE, pch=25, text.panel=labs)
@@ -570,7 +573,7 @@ ratings <- merge(x=ratings,y=corresp,
                 by="exp_subject_id")
 ratings <- ratings %>% # rename
   rename(mean_corresp = z_corresp)
-ratings = ratings[ , -which(names(ratings) %in% c("exp_subject_id","condition", "condition.x", "condition.y"))] 
+ratings = ratings[ , -which(names(ratings) %in% c("exp_subject_id","condition", "condition.x", "condition.y", "logtime"))] 
 ratings$mean_timespent = log(ratings$mean_timespent)
 
 chart.Correlation(ratings, histogram=TRUE, pch=25, text.panel=labs)
@@ -586,7 +589,7 @@ ratings <- merge(x=ratings,y=corresp,
                 by="exp_subject_id")
 ratings <- ratings %>% # rename
   rename(mean_corresp = z_corresp)
-ratings = ratings[ , -which(names(ratings) %in% c("exp_subject_id","condition", "condition.x", "condition.y"))] 
+ratings = ratings[ , -which(names(ratings) %in% c("exp_subject_id","condition", "condition.x", "condition.y", "logtime"))] 
 ratings$mean_timespent = log(ratings$mean_timespent)
 
 
@@ -713,7 +716,7 @@ fa.diagram(fa.none, digits=2, cut = .3, simple=TRUE)
 # merge mean table and participant level table
 df = pall
 
-# plot relation between enjoyment and likelihood
+# plot relation between area and feeling moved
 p <- ggplot(df, aes(x=area_composite, y=mean_moved)) +
   geom_point() + geom_smooth(method=lm , color="black", fill="gray", se=TRUE) +
   theme(legend.position="none") + theme_classic()
@@ -723,7 +726,7 @@ p2 <- ggMarginal(p, type="densigram", fill = "gray")
 p2 
 
 
-# plot relation between enjoyment and likelihood
+# plot relation between area and timespent
 p <- ggplot(df, aes(x=area_composite, y=mean_timespent)) +
   geom_point() + geom_smooth(method=lm , color="black", fill="gray", se=TRUE) +
   theme(legend.position="none") + theme_classic()
@@ -737,7 +740,37 @@ I would have expected a relationship between AReA and some of the aesthetic meas
 Perhaps AReA more relevant for visual modality. Break out by modality? 
 
 
+```{r}
+# merge mean table and participant level table
+# pvis = pall[, pall$condition == 'Visual']
+# df = pvis
 
+
+pvis <- pall %>%
+  filter(condition == "Visual")
+
+df = pvis
+
+# plot relation between area and feeling moved
+p <- ggplot(df, aes(x=area_composite, y=mean_moved)) +
+  geom_point() + geom_smooth(method=lm , color="black", fill="gray", se=TRUE) +
+  theme(legend.position="none") + theme_classic()
+
+# Custom marginal plots:
+p2 <- ggMarginal(p, type="densigram", fill = "gray") 
+p2 
+
+
+# plot relation between area and timespent
+p <- ggplot(df, aes(x=area_composite, y=mean_timespent)) +
+  geom_point() + geom_smooth(method=lm , color="black", fill="gray", se=TRUE) +
+  theme(legend.position="none") + theme_classic()
+
+# Custom marginal plots:
+p2 <- ggMarginal(p, type="densigram", fill = "gray") 
+p2 
+
+```
 
 
 
