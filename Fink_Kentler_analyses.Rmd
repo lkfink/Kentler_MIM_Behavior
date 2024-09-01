@@ -1,5 +1,5 @@
 ---
-title: "R Notebook for Kentler analyses"
+title: "R Notebook for Fink, Fiehn, Wald-Fuhrmann (2024) analyses"
 output: html_notebook
 authors: Lauren Fink & Hannah Fiehn
 contact: finkl1@mcmaster.ca
@@ -7,9 +7,13 @@ contact: finkl1@mcmaster.ca
 
 This notebook accompanies the manuscript:
 
-Fink, Fiehn & Wald-Fuhrmann (2023). The role of audiovisual congruence in perception and aesthetic appreciation of contemporary music and visual art. *Pre-print available at:* [osf.io/hjgc5/](osf.io/hjgc5/)
+Fink, Fiehn & Wald-Fuhrmann (2024). The role of audiovisual congruence in aesthetic appreciation of contemporary music and visual art. *Scientific Reports*, 71399. DOI: [https://doi.org/10.1038/s41598-024-71399-y](https://doi.org/10.1038/s41598-024-71399-y)
+
+*Pre-print available at:* [osf.io/hjgc5/](osf.io/hjgc5/)
 
 If using any code or data from this notebook, please cite the paper. 
+
+Additional code and information accompanying this R notebook are available in the associated GitHub repository: [https://github.com/lkfink/Kentler_MIM_Behavior](https://github.com/lkfink/Kentler_MIM_Behavior)
 
 # Load and preprocess data
 Turn off warnings for cleaner submission file. N.B. users of this file should turn warnings on for troubleshooting
@@ -25,7 +29,7 @@ if(length(new.packages)) install.packages(new.packages)
 ```
 
 ### Load packages and data
-We use the **here** package so that all file paths are relative. Users should be sure not to change the directory structure of the repository. 
+We use the *here* package so that all file paths are relative. Users should be sure not to change the directory structure of the repository. 
 By default, figures will be plotted in line. If you want to save the figures to a folder on your local machine, set op = 1. 
 ```{r}
 here::i_am("Fink_Kentler_analyses.Rmd")
@@ -711,7 +715,7 @@ fa.diagram(fa.none, digits=2, cut = .3, simple=TRUE)
 
 # Exploratory analysis
 
-## Relationship between personal variables and time spent / feeling moved
+### Relationship between personal variables and time spent / feeling moved (all conditions)
 ```{r}
 # merge mean table and participant level table
 df = pall
@@ -739,7 +743,7 @@ p2
 I would have expected a relationship between AReA and some of the aesthetic measures. 
 Perhaps AReA more relevant for visual modality. Break out by modality? 
 
-
+### Visual-only data
 ```{r}
 # merge mean table and participant level table
 # pvis = pall[, pall$condition == 'Visual']
