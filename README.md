@@ -2,7 +2,7 @@
 
 This repository contains data and code for reproducing the analyses reported in: 
 
-Fink, L., Fiehn, H. & Wald-Furhmann, M. (2024). The role of audiovisual congruence in aesthetic appreciation of contemporary music and visual art. *Scientific Reports*, 71399 DOI: [https://doi.org/10.1038/s41598-024-71399-y](https://doi.org/10.1038/s41598-024-71399-y)
+Fink, L., Fiehn, H. & Wald-Fuhrmann, M. (2024). The role of audiovisual congruence in aesthetic appreciation of contemporary music and visual art. *Scientific Reports*, 71399 DOI: [https://doi.org/10.1038/s41598-024-71399-y](https://doi.org/10.1038/s41598-024-71399-y)
 
 *Pre-print available at:* [osf.io/hjgc5/](osf.io/hjgc5/)
 
